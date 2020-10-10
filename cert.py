@@ -1,11 +1,14 @@
+import os
+import uuid
 from datetime import datetime, timedelta
+from typing import Tuple
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.backends.interfaces import RSABackend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID
+from cryptography.x509 import OID_COMMON_NAME
 
 
 def create_key():
@@ -17,8 +20,10 @@ def create_key():
     return key
 
 
-def generate_selfsigned_cert(hostname, key=None):
+def generate_selfsigned_cert(key=None):
     """Generates self signed certificate for a hostname, and optional IP addresses."""
+
+    hostname = "_".join(str(i) for i in uuid.uuid1().fields)
 
     # Generate our key
     if key is None:
@@ -28,7 +33,7 @@ def generate_selfsigned_cert(hostname, key=None):
             backend=default_backend(),
         )
 
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, hostname)])
+    name = x509.Name([x509.NameAttribute(OID_COMMON_NAME, hostname)])
 
     # best practice seem to be to include the hostname in the SAN, which *SHOULD* mean COMMON_NAME is ignored.
     alt_names = [x509.DNSName(hostname)]
@@ -58,3 +63,27 @@ def generate_selfsigned_cert(hostname, key=None):
     )
 
     return cert_pem, key_pem
+
+
+def load_keys(cert_filename="cert.pem", key_filename="key.pem") -> Tuple[bytes, bytes]:
+    if os.path.isfile(cert_filename) and os.path.isfile(key_filename):
+        with open(cert_filename, "rb") as f:
+            cert_pem = f.read()
+        with open(key_filename, "rb") as f:
+            key_pem = f.read()
+
+    else:
+        cert_pem, key_pem = generate_selfsigned_cert()
+
+        with open(cert_filename, "wb") as f:
+            f.write(cert_pem)
+        with open(key_filename, "wb") as f:
+            f.write(key_pem)
+
+    return cert_pem, key_pem
+
+
+def cert_name(cert_pem: bytes) -> str:
+    cert = x509.load_pem_x509_certificate(cert_pem, default_backend())
+    names = [i.value for i in cert.subject.get_attributes_for_oid(OID_COMMON_NAME)]
+    return names[0]

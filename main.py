@@ -3,34 +3,37 @@ from socket import (
     create_connection,
 )
 
-import notify2
-
-from cert import generate_selfsigned_cert
+from cert import cert_name, load_keys
 from encryption import context
 from package import Package
 from package.types import Identity
+from processor import Processor
+from processor.modules.notification import Notification
+from processor.modules.ping import Ping
 from protocol.discovery import KdeconnectDiscoveryProtocol
 from protocol.worker import KdeconnectWorkerProtocol
 
-notify2.init("PyConnect")
-
 
 async def main():
-    print("Starting detection")
+    processor = Processor([Notification(), Ping()])
+    keys = load_keys()
+    me = Identity.me(
+        cert_name(keys[0]),
+        incoming_capabilities=set(processor.inconming),
+        outgoing_capabilities=set(processor.outgoing),
+    )
 
-    my_id = Identity.me()
-    cert_pem, key_pem = generate_selfsigned_cert(my_id.device_id)
-    with open("cert.pem", "wb") as f:
-        f.write(cert_pem)
-    with open("key.pem", "wb") as f:
-        f.write(key_pem)
+    print("Starting detection")
 
     loop = asyncio.get_running_loop()
 
     on_con_lost = loop.create_future()
 
+    protocol: KdeconnectDiscoveryProtocol
     transport, protocol = await loop.create_datagram_endpoint(
-        lambda: KdeconnectDiscoveryProtocol(loop, on_con_lost, timeout=60, first=True),
+        lambda: KdeconnectDiscoveryProtocol(
+            loop, on_con_lost, id=me, timeout=60, first=True
+        ),
         local_addr=("0.0.0.0", 1716),
     )
 
@@ -45,6 +48,8 @@ async def main():
     if not clients:
         print("No client detected")
         return
+    if len(clients) > 1:
+        print(f"Multiple clients detected: {[i.device_id for i in clients.values()]}")
 
     client_ip = list(clients)[0]
     client_id: Identity = clients[client_ip]
@@ -54,14 +59,15 @@ async def main():
     on_con_lost = loop.create_future()
 
     with create_connection((str(client_ip), client_id.tcp_port)) as sock:
-        id_pkg = Package.create(Identity.me())
-        sock.send(id_pkg.bytes())
+        sock.send(Package.create(me).bytes())
 
         ssl_ctx = context()
 
         with ssl_ctx.wrap_socket(sock, server_side=True) as ssock:
             transport, protocol = await loop.create_connection(
-                lambda: KdeconnectWorkerProtocol(loop, on_con_lost, client=client_id),
+                lambda: KdeconnectWorkerProtocol(
+                    loop, on_con_lost, client=client_id, processor=processor
+                ),
                 sock=ssock,
             )
 

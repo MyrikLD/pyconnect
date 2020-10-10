@@ -21,10 +21,6 @@ class Package(BaseModel):
     type: Capability
     body: dict
 
-    @validator("body")
-    def validate_body(cls, v, values):
-        return package_types[values["type"]](**v).dict()
-
     @validator("type", pre=True)
     def capability_validator(cls, v):
         if isinstance(v, Capability):
@@ -50,11 +46,6 @@ class Package(BaseModel):
             type=t,
             body=obj.dict(by_alias=True),
         )
-
-    # def dict(self, **kwargs):
-    #     data = super().dict(**kwargs)
-    #     data["id"] = str(data["id"])
-    #     return data
 
     def bytes(self) -> bytes:
         return (self.json() + "\n").encode()

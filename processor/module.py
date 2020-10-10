@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 class Module:
     def process(self, pkg: "Package"):
         if pkg.type in self.incoming:
-            self.incoming[pkg.type](pkg.message)
+            self.incoming[pkg.type](self, pkg.message)
         else:
             raise Exception(
                 f"No such capability in module {self.__class__.__name__}: {pkg.type}"

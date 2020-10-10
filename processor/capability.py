@@ -31,6 +31,9 @@ class Capability:
 
     __repr__ = __str__
 
+    def __gt__(self, other):
+        return str(self) > str(other)
+
 
 class KDEConnect(Capability):
     Identity = Capability
@@ -96,6 +99,7 @@ class KDEConnect(Capability):
         Request = Capability
 
     class Telephony(Capability):
+        Request = Capability
         RequestMute = Capability
 
     def __call__(self, text) -> "Capability":

@@ -49,12 +49,12 @@ class KdeconnectWorkerProtocol(BaseProtocol):
 
         if pkg.type == kdeconnect.Pair:
             self.on_pair(message)
+
         if pkg.type in self.processor.inconming:
             self.processor.process(pkg)
             # self.processor[pkg.type](message)
         else:
             print(f"No processor for package type: {pkg.type}")
-            return
 
     def error_received(self, exc):
         print("Error received:", exc)
