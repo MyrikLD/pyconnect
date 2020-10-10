@@ -9,8 +9,8 @@ from socket import (
 from typing import Tuple
 
 from package import Package
-from package.package import PackageType
 from package.types import Identity
+from processor.capability import kdeconnect
 
 
 class KdeconnectDiscoveryProtocol(DatagramTransport):
@@ -56,7 +56,7 @@ class KdeconnectDiscoveryProtocol(DatagramTransport):
         except:
             return
 
-        if package.type != PackageType.identity:
+        if package.type != kdeconnect.Identity:
             return
 
         try:

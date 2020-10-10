@@ -1,1 +1,1 @@
-from .package import Package, PackageType
+from .package import Package

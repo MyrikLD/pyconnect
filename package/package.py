@@ -1,34 +1,42 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError, validator
 
-from strenum import StrEnum
+from processor.capability import Capability, kdeconnect
 from .types import Identity, Notification, Pair, Ping
 
-
-class PackageType(StrEnum):
-    identity = "kdeconnect.identity"
-    pair = "kdeconnect.pair"
-    ping = "kdeconnect.ping"
-    notification = "kdeconnect.notification"
-
-
 package_types = {
-    PackageType.identity: Identity,
-    PackageType.pair: Pair,
-    PackageType.ping: Ping,
-    PackageType.notification: Notification,
+    kdeconnect.Identity: Identity,
+    kdeconnect.Pair: Pair,
+    kdeconnect.Ping: Ping,
+    kdeconnect.Notification: Notification,
 }
 
 
 class Package(BaseModel):
-    body: dict
+    class Config:
+        arbitrary_types_allowed = True
+
     id: int
-    type: PackageType
+    type: Capability
+    body: dict
+
+    @validator("body")
+    def validate_body(cls, v, values):
+        return package_types[values["type"]](**v).dict()
+
+    @validator("type", pre=True)
+    def capability_validator(cls, v):
+        if isinstance(v, Capability):
+            return v
+        return kdeconnect(v)
 
     @property
     def message(self):
-        return package_types[self.type](**self.body)
+        try:
+            return package_types[self.type](**self.body)
+        except ValidationError:
+            raise Exception(f"Unknown {self.type} message: {self.body}")
 
     @property
     def timestamp(self):
@@ -43,10 +51,14 @@ class Package(BaseModel):
             body=obj.dict(by_alias=True),
         )
 
-    def dict(self, **kwargs):
-        data = super().dict(**kwargs)
-        data["id"] = str(data["id"])
-        return data
+    # def dict(self, **kwargs):
+    #     data = super().dict(**kwargs)
+    #     data["id"] = str(data["id"])
+    #     return data
 
     def bytes(self) -> bytes:
         return (self.json() + "\n").encode()
+
+    @staticmethod
+    def __json_encoder__(v):
+        return str(v)

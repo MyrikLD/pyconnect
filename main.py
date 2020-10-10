@@ -10,7 +10,7 @@ from encryption import context
 from package import Package
 from package.types import Identity
 from protocol.discovery import KdeconnectDiscoveryProtocol
-from protocol.dispatcher import KdeconnectWorkingProtocol
+from protocol.worker import KdeconnectWorkerProtocol
 
 notify2.init("PyConnect")
 
@@ -61,7 +61,7 @@ async def main():
 
         with ssl_ctx.wrap_socket(sock, server_side=True) as ssock:
             transport, protocol = await loop.create_connection(
-                lambda: KdeconnectWorkingProtocol(loop, on_con_lost, client=client_id),
+                lambda: KdeconnectWorkerProtocol(loop, on_con_lost, client=client_id),
                 sock=ssock,
             )
 
