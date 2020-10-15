@@ -10,8 +10,8 @@ class Clipboard(Module):
         pyperclip.copy(message.content)
 
     def connect(self, client: ClientConnection, pkg: Package):
+        # Not useable message
         pass
-        kdeconnect
 
     incoming = {
         kdeconnect.Clipboard: clipboard,

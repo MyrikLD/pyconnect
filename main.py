@@ -131,7 +131,7 @@ async def main():
 
     client = clients[0]
 
-    log.info(f"connect to: {client.id.device_name}")
+    log.info(f"connect to {client.id.device_name!r}")
 
     await work_with_client(me, client, processor)
 
