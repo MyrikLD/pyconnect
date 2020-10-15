@@ -43,8 +43,10 @@ class KdeconnectWorkerProtocol(BaseProtocol):
             return
 
         if pkg.type in self.processor.inconming:
-            self.processor.process(self.client_connection, pkg)
-            # self.processor[pkg.type](message)
+            try:
+                self.processor.process(self.client_connection, pkg)
+            except Exception as e:
+                self.log.exception(e)
         else:
             self.log.error(f"No processor for package type: {pkg.type}")
 

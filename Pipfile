@@ -11,6 +11,7 @@ cryptography = "*"
 pycryptodome = "*"
 notify2 = "*"
 dbus-python = "*"
+pyperclip = "*"
 
 [requires]
 python_version = "3.8"

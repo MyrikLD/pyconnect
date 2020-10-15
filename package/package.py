@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ValidationError, validator
 
 from processor.capability import Capability, kdeconnect
 from .types import Identity, Notification, Pair, Ping
+from .types import Clipboard, ClipboardConnect
 
 if TYPE_CHECKING:
     from . import ClientConnection
@@ -17,6 +18,8 @@ package_types = {
     kdeconnect.Pair: Pair,
     kdeconnect.Ping: Ping,
     kdeconnect.Notification: Notification,
+    kdeconnect.Clipboard: Clipboard,
+    kdeconnect.Clipboard.Connect: ClipboardConnect,
 }
 
 
@@ -64,7 +67,7 @@ class Package(BaseModel):
         data = sock.recv(self.payload_size)
 
         if payload_hash != hashlib.md5(data).hexdigest():
-            raise Exception('Invalid payload hash')
+            raise Exception("Invalid payload hash")
 
         return data
 

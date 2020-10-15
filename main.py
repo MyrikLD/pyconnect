@@ -15,6 +15,7 @@ from package import Package
 from package.client import Client, ClientConnection
 from package.types import Identity
 from processor import Processor
+from processor.modules.clipboard import Clipboard
 from processor.modules.notification import Notification
 from processor.modules.pair import Pair
 from processor.modules.ping import Ping
@@ -94,7 +95,7 @@ async def work_with_client(me: Identity, client: Client, processor: Processor):
 
 
 async def main():
-    processor = Processor([Notification(), Ping(), Pair()])
+    processor = Processor([Notification(), Ping(), Pair(), Clipboard()])
     keys = load_keys()
     me = Identity.me(
         cert_name(keys[0]),
