@@ -136,5 +136,5 @@ async def main():
     await work_with_client(me, client, processor)
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 asyncio.run(main())

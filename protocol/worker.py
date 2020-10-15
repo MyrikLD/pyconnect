@@ -35,7 +35,7 @@ class KdeconnectWorkerProtocol(BaseProtocol):
         self.log.debug(f"{self.client_connection.id.device_name}: {len(data)}")
         text = data.decode(errors="backslashreplace")
         decoded = json.loads(text)
-        self.log.info(decoded)
+        self.log.debug(decoded)
         try:
             pkg = Package(**decoded)
         except ValidationError:
