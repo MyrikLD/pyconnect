@@ -29,11 +29,6 @@ class Notification(Module):
                     f.write(data)
 
         if not message.is_cancel:
-            # if message.id in self.notifications:
-            #     return
-
-            self.log.info(f"{client.id.device_name}: {message.ticker}")
-
             notify_params = {
                 "summary": message.title,
                 "message": message.text,
@@ -44,8 +39,6 @@ class Notification(Module):
             n = notify2.Notification(**notify_params)
             self.notifications[message.id] = n
             n.show()
-
-            self.log.info(message)
         else:
             if message.id in self.notifications:
                 self.notifications[message.id].close()

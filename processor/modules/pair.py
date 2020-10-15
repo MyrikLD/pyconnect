@@ -10,7 +10,7 @@ class Pair(Module):
         store = ClientCertsStore("devices.json")
 
         if message.pair:
-            print(f"pair with {client.id.device_name}")
+            self.log.info(f"pair with {client.id.device_name}")
             store.add(client)
 
             client.sock.send(Package.create(PairMessage(pair=True)).bytes())

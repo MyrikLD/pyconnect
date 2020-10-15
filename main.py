@@ -22,6 +22,8 @@ from processor.modules.ping import Ping
 from protocol.discovery import KdeconnectDiscoveryProtocol
 from protocol.worker import KdeconnectWorkerProtocol
 
+log = logging.getLogger(__name__)
+
 
 def get_ssock(me: Identity, client: Client):
     store = ClientCertsStore("devices.json")
@@ -103,7 +105,7 @@ async def main():
         outgoing_capabilities=set(processor.outgoing),
     )
 
-    print("Starting detection")
+    log.info("Starting detection")
 
     loop = asyncio.get_running_loop()
 
@@ -121,17 +123,15 @@ async def main():
         transport.close()
         clients = protocol.clients
 
-    print(list(clients))
-
     if not clients:
-        print("No client detected")
+        log.exception("No client detected")
         return
     if len(clients) > 1:
-        print(f"Multiple clients detected: {[i.id.device_id for i in clients]}")
+        log.info(f"Multiple clients detected: {[i.id.device_id for i in clients]}")
 
     client = clients[0]
 
-    print(f"connect to: {client}")
+    log.info(f"connect to: {client.id.device_name}")
 
     await work_with_client(me, client, processor)
 

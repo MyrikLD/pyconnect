@@ -1,8 +1,8 @@
 import asyncio
 import json
-import sys
 from asyncio import DatagramTransport, TimerHandle, Transport
 from ipaddress import IPv4Address
+from logging import getLogger
 from socket import (
     SOL_SOCKET,
     SO_BROADCAST,
@@ -34,6 +34,7 @@ class KdeconnectDiscoveryProtocol(DatagramTransport):
         self.first = first
         self.timeout = timeout
         self.id = id
+        self.log = getLogger(self.__class__.__name__)
 
         super().__init__()
 
@@ -67,7 +68,7 @@ class KdeconnectDiscoveryProtocol(DatagramTransport):
         try:
             package = Package(**json.loads(data.decode()))
         except Exception as e:
-            print(e, file=sys.stderr)
+            self.log.exception(e)
             return
 
         if package.type != kdeconnect.Identity:
@@ -76,22 +77,22 @@ class KdeconnectDiscoveryProtocol(DatagramTransport):
         try:
             message: Identity = package.message
         except Exception as e:
-            print(e, file=sys.stderr)
+            self.log.exception(e)
             return
 
         if message.device_id == self.id.device_id:
             return
 
         self.clients.append(Client(ip=ip, id=message))
-        print(f"find client: {message.device_name}[{message.device_id}]")
+        self.log.info(f"find client: {message.device_name}[{message.device_id}]")
 
         if self.first:
             self.transport.close()
 
     def error_received(self, exc):
-        print("Error received:", exc)
+        self.log.exception("Error received: %s", exc)
 
     def connection_lost(self, exc=None):
         self.discover_task.cancel()
-        print("Discovery closed")
+        self.log.info("Discovery closed: %s", exc)
         self.on_con_lost.set_result(True)

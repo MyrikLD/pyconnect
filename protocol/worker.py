@@ -22,7 +22,9 @@ class KdeconnectWorkerProtocol(BaseProtocol):
         self.on_con_lost = on_con_lost
         self.client_connection = client_connection
         self.processor = processor
-        self.log = getLogger(self.__class__.__name__)
+        self.log = getLogger(
+            f"{self.__class__.__name__}[{client_connection.id.device_name}]"
+        )
 
     @property
     def loop(self):
@@ -32,7 +34,6 @@ class KdeconnectWorkerProtocol(BaseProtocol):
         self.transport = transport
 
     def data_received(self, data: bytes):
-        self.log.debug(f"{self.client_connection.id.device_name}: {len(data)}")
         text = data.decode(errors="backslashreplace")
         decoded = json.loads(text)
         self.log.debug(decoded)
