@@ -1,11 +1,13 @@
+import asyncio
 import json
-from asyncio import AbstractEventLoop, BaseProtocol, Transport
+from asyncio import BaseProtocol, Transport
+from logging import getLogger
 
 from pydantic import ValidationError
 
 from package import Package
-from package.types import Identity, Pair
-from processor import Processor, kdeconnect
+from package.client import ClientConnection
+from processor import Processor
 
 
 class KdeconnectWorkerProtocol(BaseProtocol):
@@ -13,52 +15,42 @@ class KdeconnectWorkerProtocol(BaseProtocol):
 
     def __init__(
         self,
-        loop: AbstractEventLoop,
         on_con_lost,
-        client: Identity,
+        client_connection: ClientConnection,
         processor: Processor,
     ):
-        self.loop = loop
         self.on_con_lost = on_con_lost
-
-        self.client = client
-
+        self.client_connection = client_connection
         self.processor = processor
+        self.log = getLogger(self.__class__.__name__)
 
-    def on_pair(self, message: Pair):
-        print(f"Pairing with {self.client.device_name}")
-        self.transport.write(Package.create(Pair(pair=True)).bytes())
+    @property
+    def loop(self):
+        return asyncio.get_event_loop()
 
     def connection_made(self, transport: Transport):
         self.transport = transport
 
     def data_received(self, data: bytes):
-        text = data.decode()
+        self.log.debug(f"{self.client_connection.id.device_name}: {len(data)}")
+        text = data.decode(errors="backslashreplace")
         decoded = json.loads(text)
+        self.log.info(decoded)
         try:
             pkg = Package(**decoded)
         except ValidationError:
-            print(f"unknown packet: {decoded}")
+            self.log.error(f"unknown packet: {decoded}")
             return
-
-        try:
-            message = pkg.message
-        except Exception as e:
-            print(f"ERROR: {e}")
-            return
-
-        if pkg.type == kdeconnect.Pair:
-            self.on_pair(message)
 
         if pkg.type in self.processor.inconming:
-            self.processor.process(pkg)
+            self.processor.process(self.client_connection, pkg)
             # self.processor[pkg.type](message)
         else:
-            print(f"No processor for package type: {pkg.type}")
+            self.log.error(f"No processor for package type: {pkg.type}")
 
     def error_received(self, exc):
-        print("Error received:", exc)
+        self.log.error("Error received:", exc)
 
     def connection_lost(self, exc=None):
-        print("Connection closed")
+        self.log.info(f"Connection closed: {exc}")
         self.on_con_lost.set_result(True)

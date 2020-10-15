@@ -1,5 +1,6 @@
-from typing import Dict, List, TYPE_CHECKING
+from typing import Callable, Dict, List, TYPE_CHECKING
 
+from package.client import ClientConnection
 from processor.capability import Capability
 from processor.module import Module
 
@@ -10,6 +11,7 @@ if TYPE_CHECKING:
 class Processor:
     inconming: Dict[Capability, Module]
     outgoing: Dict[Capability, Module]
+    write: Callable
 
     def __init__(
         self,
@@ -33,5 +35,8 @@ class Processor:
                     else:
                         raise Exception(f"Outgoing already exists: {outgoing}")
 
-    def process(self, pkg: "Package"):
-        self.inconming[pkg.type].process(pkg)
+    def process(self, client: "ClientConnection", pkg: "Package"):
+        self.inconming[pkg.type].process(client, pkg)
+
+    def set_writer(self, writer: Callable):
+        self.write = writer

@@ -9,4 +9,5 @@ class Pair(BaseModel):
 
     def dict(self, **kwargs):
         kwargs["exclude_unset"] = True
+        kwargs["by_alias"] = True
         return super().dict(**kwargs)

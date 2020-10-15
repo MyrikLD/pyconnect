@@ -1,9 +1,16 @@
+import hashlib
+import socket
 from datetime import datetime
+from typing import Optional, TYPE_CHECKING
 
-from pydantic import BaseModel, ValidationError, validator
+from OpenSSL import SSL, crypto
+from pydantic import BaseModel, Field, ValidationError, validator
 
 from processor.capability import Capability, kdeconnect
 from .types import Identity, Notification, Pair, Ping
+
+if TYPE_CHECKING:
+    from . import ClientConnection
 
 package_types = {
     kdeconnect.Identity: Identity,
@@ -13,6 +20,10 @@ package_types = {
 }
 
 
+class PayloadTransferInfo(BaseModel):
+    port: int
+
+
 class Package(BaseModel):
     class Config:
         arbitrary_types_allowed = True
@@ -20,6 +31,42 @@ class Package(BaseModel):
     id: int
     type: Capability
     body: dict
+
+    payload_size: Optional[int] = Field(alias="payloadSize")
+    payload_transfer_info: Optional[PayloadTransferInfo] = Field(
+        alias="payloadTransferInfo"
+    )
+
+    def read_payload(self, client: "ClientConnection", payload_hash) -> bytes:
+        def verify_cb(conn, cert, errnum, depth, ok):
+            old_cert = crypto.load_certificate(
+                crypto.FILETYPE_PEM, client.cert.encode()
+            )
+            if old_cert.to_cryptography() != cert.to_cryptography():
+                raise Exception("Certificate error")
+            return 1
+
+        ctx = SSL.Context(method=SSL.TLSv1_2_METHOD)
+        ciphers = [
+            "ECDHE-ECDSA-AES256-GCM-SHA384",
+            "ECDHE-ECDSA-AES128-GCM-SHA256",
+            "ECDHE-RSA-AES128-SHA",
+        ]
+        ctx.set_cipher_list(":".join(ciphers).encode())
+        ctx.set_verify(SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT, verify_cb)
+
+        ctx.use_privatekey_file("key.pem")
+        ctx.use_certificate_file("cert.pem")
+
+        sock = SSL.Connection(ctx, socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        sock.connect((str(client.ip), self.payload_transfer_info.port))
+        sock.do_handshake()
+        data = sock.recv(self.payload_size)
+
+        if payload_hash != hashlib.md5(data).hexdigest():
+            raise Exception('Invalid payload hash')
+
+        return data
 
     @validator("type", pre=True)
     def capability_validator(cls, v):
@@ -53,3 +100,8 @@ class Package(BaseModel):
     @staticmethod
     def __json_encoder__(v):
         return str(v)
+
+    def dict(self, **kwargs):
+        kwargs["exclude_unset"] = True
+        kwargs["by_alias"] = True
+        return super().dict(**kwargs)

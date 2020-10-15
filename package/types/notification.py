@@ -23,3 +23,8 @@ class Notification(BaseModel):
 
     def __repr_args__(self):
         return self.dict(exclude_unset=True).items()
+
+    def dict(self, **kwargs):
+        kwargs["exclude_unset"] = True
+        kwargs["by_alias"] = True
+        return super().dict(**kwargs)
